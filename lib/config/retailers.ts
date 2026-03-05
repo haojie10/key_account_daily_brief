@@ -22,7 +22,7 @@ export const RETAILERS_BY_REGION = {
     spain: ['Mercadona', 'DIA', 'Eroski Group', 'Consum', 'SPAR', 'Ahorramas', 'El Corte Inglés', 'Condis', 'BonÀrea', 'Juguettos', 'Muy Mucho'],
 
     // 欧洲 - 波兰
-    poland: ['Biedronka', 'Żabka', 'Dino', 'Lewiatan', 'Eurocash', 'Allegro', 'Stokrotka', 'LPP', 'Empik', 'Hebe', 'Pepco', 'PoloMarket', 'Media Expert'],
+    poland: ['Biedronka', 'Żabka', 'Dino', 'Lewiatan', 'Eurocash', 'Allegro', 'Stokrotka', 'LPP', 'Empik', 'Hebe', 'Pepco', 'PoloMarket', 'Media Expert', 'Sinsay'],
 
     // 北美 - 美国
     us: ['Walmart', 'Target', 'Costco', 'Kroger', 'CVS', 'Albertsons', 'Publix', 'TJX', 'Dollar General', 'Dollar Tree', 'Ross Stores', 'Burlington', 'Meijer', 'BJ\'s Wholesale', 'Macy\'s', 'JCPenney'],
@@ -46,7 +46,20 @@ export const ROTATION_SCHEDULE = {
     6: [],                                   // 周六：不发送
 };
 
-const DAILY_MANDATORY_RETAILERS = ['Dollarama', 'Sinsay', 'B&M', 'HEMA', 'Biedronka'];
+// 每个地区的优先关注渠道：排期轮到时，这些渠道必须有 1-2 条资讯且放在最前面
+export const PRIORITY_RETAILERS_BY_REGION: Record<string, string[]> = {
+    germany: [],
+    france: [],
+    netherlands: ['HEMA'],
+    italy: [],
+    uk: ['B&M'],
+    nordics: [],
+    spain: [],
+    poland: ['Biedronka', 'Sinsay'],
+    us: [],
+    canada_mexico: ['Dollarama'],
+    au_za: [],
+};
 
 // 获取某天的搜索配置
 export function getSearchConfigForDate(date: Date) {
@@ -60,16 +73,21 @@ export function getSearchConfigForDate(date: Date) {
     const regionsToSearch = ROTATION_SCHEDULE[dayOfWeek as keyof typeof ROTATION_SCHEDULE];
 
     // 收集所有当天要搜索的具体零售商
-    let rotationRetailers = regionsToSearch.flatMap(region =>
-        RETAILERS_BY_REGION[region as keyof typeof RETAILERS_BY_REGION]
-    );
+    const rotationRetailers = Array.from(new Set(
+        regionsToSearch.flatMap(region =>
+            RETAILERS_BY_REGION[region as keyof typeof RETAILERS_BY_REGION]
+        )
+    ));
 
-    // 加入每日必搜渠道，并去重
-    rotationRetailers = Array.from(new Set([...DAILY_MANDATORY_RETAILERS, ...rotationRetailers]));
+    // 收集当天轮到地区的优先关注渠道
+    const priorityRetailers = regionsToSearch.flatMap(region =>
+        PRIORITY_RETAILERS_BY_REGION[region] || []
+    );
 
     return {
         rotationRegions: regionsToSearch,
-        rotationRetailers: rotationRetailers,
+        rotationRetailers,
+        priorityRetailers,
         queryTimeframe: 'qdr:w' // qdr:w 代表过去一周
     };
 }

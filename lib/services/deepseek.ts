@@ -22,16 +22,32 @@ export interface BriefingItem {
 
 export async function selectTopStories(
     items: SearchResult[],
-    count: number
+    count: number,
+    priorityRetailers: string[] = []
 ): Promise<{ item: SearchResult; region: 'EU' | 'US' | 'GLOBAL' }[]> {
     try {
+        // 构建优先渠道约束说明
+        const priorityConstraint = priorityRetailers.length > 0
+            ? `
+**重要约束（必须严格遵守）**：
+1. 以下是今日"优先关注渠道"：${priorityRetailers.join(', ')}。请确保每个优先渠道至少有 1 条新闻入选（最多 2 条），并且放在结果数组的最前面。
+2. 其他渠道（非优先）每个最多只能选 1 条新闻。
+3. 同一个零售渠道/品牌不得出现超过上述数量限制。
+4. 结果排序：优先渠道的新闻排在最前面，之后是其他渠道的新闻。`
+            : '';
+
         const prompt = `
-你是一个专业的零售行业分析师。请从以下新闻列表中，挑选出 ${count} 条对"中国日用百货出口商"最有价值的新闻。
+你是一个专业的零售行业分析师。请从以下新闻列表中，挑选出最多 ${count} 条对"中国日用百货出口商"最有价值的新闻。
 由于这些新闻来源混杂，你需要在挑选的同时，判断这条新闻主要发生的区域（EU代表欧洲，US代表北美，GLOBAL代表全球/其他地区）。
 关注重点：超市渠道动向（如Lidl, Aldi, Walmart, Action等）、市场趋势、SKU 变化、消费者洞察。尽量兼顾大品牌和区域性特色超市。
+${priorityConstraint}
 
-请返回 JSON 格式的数组，每个对象包含 "index"（数字，列表中的序号）和 "region"（字符串，"EU", "US" 或 "GLOBAL"）。
-例如：{"results": [{"index": 0, "region": "EU"}, {"index": 5, "region": "US"}]}
+请返回 JSON 格式，每个对象包含：
+- "index"（数字，列表中的序号）
+- "region"（字符串，"EU", "US" 或 "GLOBAL"）
+- "retailer"（字符串，该新闻涉及的主要零售商/品牌名称）
+优先渠道的新闻必须排在数组最前面。
+例如：{"results": [{"index": 0, "region": "EU", "retailer": "B&M"}, {"index": 5, "region": "US", "retailer": "Walmart"}]}
 
 新闻列表：
 ${items.map((item, index) => `${index}. [${item.date || 'N/A'}] ${item.title} - ${item.source} (${item.snippet})`).join('\n')}
@@ -44,7 +60,7 @@ ${items.map((item, index) => `${index}. [${item.date || 'N/A'}] ${item.title} - 
         });
 
         const content = completion.choices[0].message.content || "{}";
-        let results: { index: number, region: 'EU' | 'US' | 'GLOBAL' }[] = [];
+        let results: { index: number; region: 'EU' | 'US' | 'GLOBAL'; retailer?: string }[] = [];
         try {
             const parsed = JSON.parse(content);
             results = parsed.results || Object.values(parsed)[0];
@@ -53,25 +69,45 @@ ${items.map((item, index) => `${index}. [${item.date || 'N/A'}] ${item.title} - 
             console.error('Failed to parse selected JSON', e);
         }
 
-        const finalSelection: { item: SearchResult; region: 'EU' | 'US' | 'GLOBAL' }[] = [];
+        // 后处理：严格按渠道去重并限制数量
+        const prioritySet = new Set(priorityRetailers.map(r => r.toLowerCase()));
+        const retailerCount: Record<string, number> = {};
+        const priorityItems: { item: SearchResult; region: 'EU' | 'US' | 'GLOBAL' }[] = [];
+        const regularItems: { item: SearchResult; region: 'EU' | 'US' | 'GLOBAL' }[] = [];
+
         for (const res of results) {
             const idx = res.index;
-            if (typeof idx === 'number' && idx >= 0 && idx < items.length) {
-                finalSelection.push({
-                    item: items[idx],
-                    region: ['EU', 'US', 'GLOBAL'].includes(res.region) ? res.region : 'GLOBAL'
-                });
+            if (typeof idx !== 'number' || idx < 0 || idx >= items.length) continue;
+
+            const retailerName = (res.retailer || '').toLowerCase().trim();
+            if (!retailerName) continue;
+
+            const isPriority = prioritySet.has(retailerName);
+            // 优先渠道最多 2 条，其他渠道最多 1 条
+            const maxAllowed = isPriority ? 2 : 1;
+            const currentCount = retailerCount[retailerName] || 0;
+            if (currentCount >= maxAllowed) continue;
+
+            retailerCount[retailerName] = currentCount + 1;
+            const entry = {
+                item: items[idx],
+                region: (['EU', 'US', 'GLOBAL'].includes(res.region) ? res.region : 'GLOBAL') as 'EU' | 'US' | 'GLOBAL'
+            };
+
+            // 优先渠道放前面，其他放后面
+            if (isPriority) {
+                priorityItems.push(entry);
+            } else {
+                regularItems.push(entry);
             }
         }
 
+        // 最终合并：优先渠道在前，其他渠道在后
+        const finalSelection = [...priorityItems, ...regularItems];
         return finalSelection.slice(0, count);
     } catch (error) {
         console.error(`Error selecting top stories:`, error);
-        if (!process.env.DEEPSEEK_API_KEY) {
-            // Mock selection
-            return items.slice(0, count).map(item => ({ item, region: 'GLOBAL' }));
-        }
-        return items.slice(0, count).map(item => ({ item, region: 'GLOBAL' })); // Fallback
+        return items.slice(0, count).map(item => ({ item, region: 'GLOBAL' as const }));
     }
 }
 

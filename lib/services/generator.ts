@@ -26,6 +26,7 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
     }
 
     console.log(`[Generator] Today's target regions: ${config.rotationRegions.join(', ')}`);
+    console.log(`[Generator] Priority retailers: ${config.priorityRetailers.length > 0 ? config.priorityRetailers.join(', ') : 'None'}`);
 
     // 搜索当天轮换区域的零售商资讯
     const allNews = await searchRetailers(config.rotationRetailers, config.queryTimeframe);
@@ -41,9 +42,9 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
         };
     }
 
-    // 2. Filter Top 10 Items dynamically via LLM
-    const topSelected = await selectTopStories(allNews, 10);
-    console.log(`[Generator] Selected ${topSelected.length} mixed items for processing.`);
+    // 2. 使用 LLM 筛选，遵循优先渠道置顶 & 渠道去重约束
+    const topSelected = await selectTopStories(allNews, 10, config.priorityRetailers);
+    console.log(`[Generator] Selected ${topSelected.length} items for processing (priority first).`);
 
     // 3. Parallel Scrape & Summarize
     const briefingPromises = topSelected.map(async ({ item, region }) => {
