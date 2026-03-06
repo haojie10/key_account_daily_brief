@@ -172,7 +172,7 @@ ${content.slice(0, 8000)}
         return {
             title: result.title || item.title,
             url: item.link,
-            source: item.source || 'Unknown',
+            source: item.source || '未知来源',
             summary: result.recap || item.snippet,
             recap: result.recap || item.snippet,
             highlights: result.highlights || [],
@@ -188,7 +188,7 @@ ${content.slice(0, 8000)}
         return {
             title: item.title,
             url: item.link,
-            source: item.source || 'Unknown',
+            source: item.source || '未知来源',
             summary: item.snippet,
             recap: item.snippet,
             highlights: [],

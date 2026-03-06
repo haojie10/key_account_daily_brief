@@ -11,10 +11,10 @@ export interface SearchResult {
   source?: string;
 }
 
-export async function searchNews(query: string, location: string = 'us', timeframe: string = 'qdr:d'): Promise<SearchResult[]> {
+export async function searchNews(query: string, location: string = 'us', timeframe: string = 'qdr:w'): Promise<SearchResult[]> {
   if (!SERPAPI_API_KEY) {
-    console.warn('SERPAPI_API_KEY is not set. Returning MOCK data.');
-    return getMockData(location);
+    console.warn('SERPAPI_API_KEY is not set. Returning empty array to prevent mock data.');
+    return [];
   }
 
   try {
@@ -30,14 +30,14 @@ export async function searchNews(query: string, location: string = 'us', timefra
 
     if (!response.ok) {
       console.error(`SerpApi error: ${response.status} ${response.statusText}`);
-      return getMockData(location); // Fallback on error
+      return [];
     }
 
     const result = await response.json();
 
     if (result.error) {
       console.error('SerpApi returned error:', result.error);
-      return getMockData(location);
+      return [];
     }
 
     if (!result.news_results) return [];
@@ -46,13 +46,14 @@ export async function searchNews(query: string, location: string = 'us', timefra
       title: item.title,
       link: item.link,
       snippet: item.snippet || '',
-      imageUrl: item.thumbnail?.src,
+      imageUrl: item.thumbnail || item.thumbnail?.src,
       date: item.date,
-      source: item.source?.title
+      // Google News from SerpApi may place source in `source`(string), `source.title`, `source.name`, or `source_info.name`
+      source: item.source?.name || item.source?.title || item.source_info?.name || (typeof item.source === 'string' ? item.source : '未知来源')
     }));
   } catch (error) {
     console.error('Error searching news:', error);
-    return getMockData(location);
+    return [];
   }
 }
 
@@ -81,7 +82,7 @@ export async function searchRetailers(retailers: string[], timeframe: string = '
   return uniqueResults;
 }
 
-export async function scrapeContent(url: string): Promise<string> {
+export async function scrapeContent(url: string): Promise<{ text: string, ogImage?: string }> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
@@ -95,10 +96,16 @@ export async function scrapeContent(url: string): Promise<string> {
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) return '';
+    if (!response.ok) return { text: '' };
 
     const html = await response.text();
     const $ = cheerio.load(html);
+
+    // 提取 og:image
+    let ogImage = $('meta[property="og:image"]').attr('content');
+    if (!ogImage) {
+      ogImage = $('meta[name="twitter:image"]').attr('content');
+    }
 
     $('script, style, nav, footer, header, ads, .ads, .sidebar, iframe').remove();
 
@@ -110,37 +117,11 @@ export async function scrapeContent(url: string): Promise<string> {
       content = $('body').text();
     }
 
-    return content.replace(/\s+/g, ' ').trim().slice(0, 10000);
+    const text = content.replace(/\s+/g, ' ').trim().slice(0, 10000);
+    return { text, ogImage };
   } catch (error) {
     console.warn(`Error scraping ${url}:`, error);
-    return '';
+    return { text: '' };
   }
 }
 
-function getMockData(location: string): SearchResult[] {
-  return [
-    {
-      title: `[MOCK] Lidl's New Sustainability Push in ${location === 'gb' ? 'Europe' : 'Global'}`,
-      link: 'https://example.com/lidl-news',
-      snippet: 'Lidl announces major changes to its supply chain to reduce carbon footprint by 30%...',
-      source: 'Retail Gazette',
-      date: '1 hour ago',
-      imageUrl: 'https://placehold.co/600x400?text=Lidl+News'
-    },
-    {
-      title: `[MOCK] Walmart Q3 Earnings Beat Expectations`,
-      link: 'https://example.com/walmart-news',
-      snippet: 'Walmart reports 5% revenue growth driven by strong grocery sales and ecommerce...',
-      source: 'CNBC',
-      date: '2 hours ago',
-      imageUrl: 'https://placehold.co/600x400?text=Walmart+Earnings'
-    },
-    {
-      title: `[MOCK] Consumer Spending Trends in ${location}`,
-      link: 'https://example.com/trends',
-      snippet: 'New report shows consumers are shifting towards private label brands...',
-      source: 'NielsenIQ',
-      date: '5 hours ago'
-    }
-  ];
-}

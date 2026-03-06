@@ -3,15 +3,10 @@ import { render } from '@react-email/render';
 import { DailyBriefingEmail } from '../emails/DailyBriefingEmail';
 import { DailyBriefing } from './generator';
 
-/**
- * 使用 Gmail + Nodemailer 发送简报邮件
- * 需要在 .env.local 中配置：
- *   GMAIL_USER=your-gmail@gmail.com
- *   GMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
- * NOTE: Gmail 需要开启「应用专用密码」，不是 Gmail 登录密码
- */
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_APP_PASSWORD,
@@ -21,6 +16,7 @@ const transporter = nodemailer.createTransport({
 // 收件人列表，后续可扩展到 10 个
 const RECIPIENTS = [
     '838048181@qq.com',
+    'sales@howstoday.com',
 ];
 
 export async function sendBriefingEmail(briefing: DailyBriefing, to?: string) {
@@ -32,7 +28,6 @@ export async function sendBriefingEmail(briefing: DailyBriefing, to?: string) {
     const recipients = to ? [to] : RECIPIENTS;
 
     try {
-        // 使用 react-email 的 render 将 React 组件渲染为 HTML 字符串
         const emailHtml = await render(
             DailyBriefingEmail({ date: briefing.date, items: briefing.items })
         );

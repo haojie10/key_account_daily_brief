@@ -49,16 +49,28 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
     // 3. Parallel Scrape & Summarize
     const briefingPromises = topSelected.map(async ({ item, region }) => {
         let content = '';
+        let finalImageUrl = item.imageUrl;
 
         // Attempt scrape
-        content = await scrapeContent(item.link);
+        const scrapeResult = await scrapeContent(item.link);
+        content = scrapeResult.text;
+
+        // 优先使用源网页自身的 og:image
+        if (scrapeResult.ogImage) {
+            finalImageUrl = scrapeResult.ogImage;
+        }
 
         if (!content || content.length < 200) {
             console.log(`[Generator] Scrape failed/empty for ${item.link}, using snippet.`);
             content = item.snippet; // Fallback
         }
 
-        return generateBriefingItem(item, content, region);
+        // Generate Briefing and override imageUrl with our enhanced one
+        const generated = await generateBriefingItem(item, content, region);
+        if (generated) {
+            generated.imageUrl = finalImageUrl;
+        }
+        return generated;
     });
 
     const rawItems = await Promise.all(briefingPromises);
