@@ -138,7 +138,7 @@ export async function generateBriefingItem(
 新闻标题：${item.title}
 来源：${item.source}
 原始内容：
-${content.slice(0, 8000)}
+${content.slice(0, 4000)}
 
 要求：
 1. 标题（title）：简练、吸引人，包含关键企业/品牌名。

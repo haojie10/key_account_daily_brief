@@ -59,7 +59,7 @@ export async function searchNews(query: string, location: string = 'us', timefra
 
 // 新增：批量搜索零售商
 export async function searchRetailers(retailers: string[], timeframe: string = 'qdr:w'): Promise<SearchResult[]> {
-  const CHUNK_SIZE = 5; // 每5个零售商一组，避免查询字符串过长
+  const CHUNK_SIZE = 8; // 每8个零售商一组，减少 API 调用次数以缩短总耗时
   const chunks = [];
   for (let i = 0; i < retailers.length; i += CHUNK_SIZE) {
     chunks.push(retailers.slice(i, i + CHUNK_SIZE));
@@ -74,7 +74,7 @@ export async function searchRetailers(retailers: string[], timeframe: string = '
     allResults = [...allResults, ...results];
 
     // 适当休眠避免并发过高触发限制
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   // 简单按 URL 去重
@@ -85,7 +85,7 @@ export async function searchRetailers(retailers: string[], timeframe: string = '
 export async function scrapeContent(url: string): Promise<{ text: string, ogImage?: string }> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout — 压缩抓取时间
 
     const response = await fetch(url, {
       signal: controller.signal,

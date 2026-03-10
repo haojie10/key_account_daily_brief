@@ -14,6 +14,7 @@ export interface DailyBriefing {
 }
 
 export async function generateDailyBriefing(): Promise<DailyBriefing> {
+    const startTime = Date.now();
     const today = new Date();
     const dateStr = today.toISOString().split('T')[0];
 
@@ -30,8 +31,8 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
 
     // 搜索当天轮换区域的零售商资讯
     const allNews = await searchRetailers(config.rotationRetailers, config.queryTimeframe);
-
-    console.log(`[Generator] Search complete. Found ${allNews.length} news items from regions: ${config.rotationRegions.join(', ')}`);
+    const searchElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Generator] Search complete in ${searchElapsed}s. Found ${allNews.length} news items.`);
 
     if (allNews.length === 0) {
         return {
@@ -42,30 +43,37 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
         };
     }
 
-    // 2. 使用 LLM 筛选，遵循优先渠道置顶 & 渠道去重约束
-    const topSelected = await selectTopStories(allNews, 10, config.priorityRetailers);
-    console.log(`[Generator] Selected ${topSelected.length} items for processing (priority first).`);
+    // NOTE: 将选取数从 10 减到 5，以大幅减少 DeepSeek 调用次数，避免 Vercel 60s 超时
+    const topSelected = await selectTopStories(allNews, 5, config.priorityRetailers);
+    const selectElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Generator] Selected ${topSelected.length} items in ${selectElapsed}s (priority first).`);
 
-    // 3. Parallel Scrape & Summarize
+    // 全局超时保护：预留 10 秒给邮件发送
+    const GLOBAL_TIMEOUT_MS = 50_000;
+
+    // 并行抓取 & 生成摘要，使用 allSettled 防止单条失败拖垮整体
     const briefingPromises = topSelected.map(async ({ item, region }) => {
+        // 如果已经接近超时，直接跳过抓取，用 snippet
+        if (Date.now() - startTime > GLOBAL_TIMEOUT_MS) {
+            console.log(`[Generator] Timeout guard: skipping scrape for ${item.link}`);
+            return generateBriefingItem(item, item.snippet, region);
+        }
+
         let content = '';
         let finalImageUrl = item.imageUrl;
 
-        // Attempt scrape
         const scrapeResult = await scrapeContent(item.link);
         content = scrapeResult.text;
 
-        // 优先使用源网页自身的 og:image
         if (scrapeResult.ogImage) {
             finalImageUrl = scrapeResult.ogImage;
         }
 
         if (!content || content.length < 200) {
             console.log(`[Generator] Scrape failed/empty for ${item.link}, using snippet.`);
-            content = item.snippet; // Fallback
+            content = item.snippet;
         }
 
-        // Generate Briefing and override imageUrl with our enhanced one
         const generated = await generateBriefingItem(item, content, region);
         if (generated) {
             generated.imageUrl = finalImageUrl;
@@ -73,10 +81,14 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
         return generated;
     });
 
-    const rawItems = await Promise.all(briefingPromises);
-    const items = rawItems.filter((i): i is BriefingItem => i !== null);
+    const settled = await Promise.allSettled(briefingPromises);
+    const items = settled
+        .filter((r): r is PromiseFulfilledResult<BriefingItem | null> => r.status === 'fulfilled')
+        .map(r => r.value)
+        .filter((i): i is BriefingItem => i !== null);
 
-    console.log(`[Generator] Generation complete. ${items.length} valid items produced.`);
+    const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Generator] Generation complete in ${totalElapsed}s. ${items.length} valid items produced.`);
 
     return {
         id: dateStr,
