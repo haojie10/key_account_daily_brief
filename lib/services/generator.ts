@@ -2,6 +2,46 @@ import { searchRetailers, scrapeContent, SearchResult } from './search';
 import { selectTopStories, generateBriefingItem, BriefingItem } from './deepseek';
 import { getSearchConfigForDate } from '../config/retailers';
 
+/**
+ * 基于标题关键词相似度去重
+ * 提取标题中的有意义词汇（≥3字符），如果两条新闻关键词重叠超过 50% 则视为雷同
+ */
+function deduplicateByTitle(items: BriefingItem[]): BriefingItem[] {
+    const extractKeywords = (title: string): Set<string> => {
+        // 移除标点、转小写，提取长度 ≥ 3 的词
+        const words = title
+            .toLowerCase()
+            .replace(/[^\w\s\u4e00-\u9fff]/g, ' ')
+            .split(/\s+/)
+            .filter(w => w.length >= 3);
+        return new Set(words);
+    };
+
+    const overlapRatio = (a: Set<string>, b: Set<string>): number => {
+        if (a.size === 0 || b.size === 0) return 0;
+        let overlap = 0;
+        for (const word of a) {
+            if (b.has(word)) overlap++;
+        }
+        return overlap / Math.min(a.size, b.size);
+    };
+
+    const result: BriefingItem[] = [];
+    const keywordSets: Set<string>[] = [];
+
+    for (const item of items) {
+        const keywords = extractKeywords(item.title);
+        const isDuplicate = keywordSets.some(existing => overlapRatio(existing, keywords) > 0.5);
+
+        if (!isDuplicate) {
+            result.push(item);
+            keywordSets.push(keywords);
+        }
+    }
+
+    return result;
+}
+
 export interface DailyBriefing {
     id: string; // date string
     date: string;
@@ -43,8 +83,8 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
         };
     }
 
-    // NOTE: 将选取数从 10 减到 5，以大幅减少 DeepSeek 调用次数，避免 Vercel 60s 超时
-    const topSelected = await selectTopStories(allNews, 5, config.priorityRetailers);
+    // 选取 10 条最有价值的新闻
+    const topSelected = await selectTopStories(allNews, 10, config.priorityRetailers);
     const selectElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[Generator] Selected ${topSelected.length} items in ${selectElapsed}s (priority first).`);
 
@@ -82,10 +122,16 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
     });
 
     const settled = await Promise.allSettled(briefingPromises);
-    const items = settled
+    const rawItems = settled
         .filter((r): r is PromiseFulfilledResult<BriefingItem | null> => r.status === 'fulfilled')
         .map(r => r.value)
         .filter((i): i is BriefingItem => i !== null);
+
+    // 代码级去重：基于标题关键词相似度，过滤雷同资讯
+    const items = deduplicateByTitle(rawItems);
+    if (rawItems.length !== items.length) {
+        console.log(`[Generator] Dedup: removed ${rawItems.length - items.length} similar items.`);
+    }
 
     const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[Generator] Generation complete in ${totalElapsed}s. ${items.length} valid items produced.`);

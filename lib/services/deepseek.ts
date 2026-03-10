@@ -47,6 +47,11 @@ ${priorityConstraint}
 - "region"（字符串，"EU", "US" 或 "GLOBAL"）
 - "retailer"（字符串，该新闻涉及的主要零售商/品牌名称）
 优先渠道的新闻必须排在数组最前面。
+
+**去重约束（严格遵守）**：
+- 如果多条新闻报道的是同一事件（哪怕来自不同媒体），只选 1 条，选最详细的版本。
+- 每条被选新闻必须覆盖不同的主题或事件，不得出现内容雷同的条目。
+
 例如：{"results": [{"index": 0, "region": "EU", "retailer": "B&M"}, {"index": 5, "region": "US", "retailer": "Walmart"}]}
 
 新闻列表：
