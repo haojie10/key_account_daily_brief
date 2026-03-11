@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ success: true, data: briefing });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Manual generation failed:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
     }
 }

@@ -1,6 +1,5 @@
 import { getBriefings } from '@/lib/storage';
 import { Calendar, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 

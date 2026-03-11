@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { RefreshCw, Play } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { BriefingPreviewModal } from './BriefingPreviewModal';
 import { DailyBriefing } from '@/lib/services/generator';
 
 export function ManualTrigger() {
     const [loading, setLoading] = useState(false);
     const [previewData, setPreviewData] = useState<DailyBriefing | null>(null);
-    const router = useRouter();
 
     const handleTrigger = async () => {
         if (loading) return;
@@ -29,9 +27,10 @@ export function ManualTrigger() {
             } else {
                 alert('生成成功，但未返回数据。请检查 API。');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            alert(`生成失败: ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            alert(`生成失败: ${errorMessage}`);
         } finally {
             setLoading(false);
         }

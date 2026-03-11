@@ -47,7 +47,7 @@ function isWithinDays(dateStr: string | undefined, days: number): boolean {
   return true;
 }
 
-export async function searchNews(query: string, location: string = 'us', timeframe: string = 'qdr:w'): Promise<SearchResult[]> {
+export async function searchNews(query: string, location: string = 'us'): Promise<SearchResult[]> {
   if (!SERPAPI_API_KEY) {
     console.warn('SERPAPI_API_KEY is not set. Returning empty array to prevent mock data.');
     return [];
@@ -78,14 +78,23 @@ export async function searchNews(query: string, location: string = 'us', timefra
 
     if (!result.news_results) return [];
 
-    return result.news_results.map((item: any) => ({
-      title: item.title,
-      link: item.link,
-      snippet: item.snippet || '',
-      imageUrl: item.thumbnail || item.thumbnail?.src,
-      date: item.date,
-      source: item.source?.name || item.source?.title || item.source_info?.name || (typeof item.source === 'string' ? item.source : '未知来源')
-    }));
+    return result.news_results.map((item: Record<string, unknown>) => {
+      const sourceObj = item.source as Record<string, unknown> | undefined;
+      const sourceInfoObj = item.source_info as Record<string, unknown> | undefined;
+      const thumbnailObj = item.thumbnail as Record<string, unknown> | undefined;
+
+      return {
+        title: String(item.title || ''),
+        link: String(item.link || ''),
+        snippet: String(item.snippet || ''),
+        imageUrl: (typeof item.thumbnail === 'string' ? item.thumbnail : (thumbnailObj?.src as string | undefined)),
+        date: item.date as string | undefined,
+        source: (sourceObj?.name as string | undefined) ||
+          (sourceObj?.title as string | undefined) ||
+          (sourceInfoObj?.name as string | undefined) ||
+          (typeof item.source === 'string' ? item.source : '未知来源')
+      };
+    });
   } catch (error) {
     console.error('Error searching news:', error);
     return [];
@@ -93,7 +102,7 @@ export async function searchNews(query: string, location: string = 'us', timefra
 }
 
 // 批量搜索零售商，带代码级日期过滤
-export async function searchRetailers(retailers: string[], timeframe: string = 'qdr:w', gl: string = 'us'): Promise<SearchResult[]> {
+export async function searchRetailers(retailers: string[], gl: string = 'us'): Promise<SearchResult[]> {
   const CHUNK_SIZE = 5;
   const chunks = [];
   for (let i = 0; i < retailers.length; i += CHUNK_SIZE) {
@@ -104,7 +113,7 @@ export async function searchRetailers(retailers: string[], timeframe: string = '
 
   for (const chunk of chunks) {
     const query = `${chunk.join(' OR ')} retail news`;
-    const results = await searchNews(query, gl, timeframe);
+    const results = await searchNews(query, gl);
     allResults = [...allResults, ...results];
 
     await new Promise(resolve => setTimeout(resolve, 200));
