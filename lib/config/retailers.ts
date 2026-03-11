@@ -61,6 +61,36 @@ export const PRIORITY_RETAILERS_BY_REGION: Record<string, string[]> = {
     au_za: [],
 };
 
+// 每个区域对应的 Google 搜索国家代码，确保搜索结果来自当地市场
+export const GL_BY_REGION: Record<string, string> = {
+    germany: 'de',
+    france: 'fr',
+    netherlands: 'nl',
+    italy: 'it',
+    uk: 'gb',
+    nordics: 'dk',
+    spain: 'es',
+    poland: 'pl',
+    us: 'us',
+    canada_mexico: 'ca',
+    au_za: 'au',
+};
+
+// 每个区域的通用行业搜索词，补充品牌搜索覆盖不到的行业资讯
+export const INDUSTRY_QUERIES_BY_REGION: Record<string, string[]> = {
+    germany: ['Germany retail supermarket industry news'],
+    france: ['France retail grocery industry news'],
+    netherlands: ['Netherlands retail store industry news'],
+    italy: ['Italy retail grocery industry news'],
+    uk: ['UK retail supermarket industry news'],
+    nordics: ['Nordic Scandinavian retail industry news'],
+    spain: ['Spain retail supermarket industry news'],
+    poland: ['Poland retail store industry news'],
+    us: ['US retail grocery supermarket industry news'],
+    canada_mexico: ['Canada Mexico retail industry news'],
+    au_za: ['Australia South Africa retail industry news'],
+};
+
 // 获取某天的搜索配置
 export function getSearchConfigForDate(date: Date) {
     const dayOfWeek = date.getDay();
@@ -84,10 +114,19 @@ export function getSearchConfigForDate(date: Date) {
         PRIORITY_RETAILERS_BY_REGION[region] || []
     );
 
+    // NOTE: 按区域分组的搜索配置，包含各区域的 gl 参数和行业搜索词
+    const regionSearchGroups = regionsToSearch.map(region => ({
+        region,
+        retailers: RETAILERS_BY_REGION[region as keyof typeof RETAILERS_BY_REGION] || [],
+        gl: GL_BY_REGION[region] || 'us',
+        industryQueries: INDUSTRY_QUERIES_BY_REGION[region] || [],
+    }));
+
     return {
         rotationRegions: regionsToSearch,
         rotationRetailers,
         priorityRetailers,
-        queryTimeframe: 'qdr:w' // qdr:w 代表过去一周
+        queryTimeframe: 'qdr:w',
+        regionSearchGroups,
     };
 }

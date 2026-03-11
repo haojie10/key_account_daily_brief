@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+﻿import OpenAI from 'openai';
 import { SearchResult } from './search';
 
 const openai = new OpenAI({
@@ -151,7 +151,7 @@ ${content.slice(0, 4000)}
 3. Highlights（highlights）：提取 3-5 个关键数据或亮点，作为字符串数组返回。
 4. Takeaways（takeaways）：50-100字，中文。对供应链、选品或出口商的启示。
 5. 标签（tags）：提取 3-5 个关键标签（如：Lidl, 厨具, 德国市场）。
-6. 如果内容与"日用百货/零售"完全无关，请将 isValid 设为 false。
+6. 只有当内容与零售行业（超市、连锁门店、快消品、消费品、日用百货、电商零售等）完全无关时，才将 isValid 设为 false。门店扩张、人事变动、财报业绩、市场策略、供应链变化、行业趋势等均视为有效内容。
 
 输出 JSON 格式：
 {

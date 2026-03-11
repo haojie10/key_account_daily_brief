@@ -1,4 +1,4 @@
-import { searchRetailers, scrapeContent, SearchResult } from './search';
+import { searchRetailers, searchNews, scrapeContent, SearchResult } from './search';
 import { selectTopStories, generateBriefingItem, BriefingItem } from './deepseek';
 import { getSearchConfigForDate } from '../config/retailers';
 
@@ -69,10 +69,28 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
     console.log(`[Generator] Today's target regions: ${config.rotationRegions.join(', ')}`);
     console.log(`[Generator] Priority retailers: ${config.priorityRetailers.length > 0 ? config.priorityRetailers.join(', ') : 'None'}`);
 
-    // 搜索当天轮换区域的零售商资讯
-    const allNews = await searchRetailers(config.rotationRetailers, config.queryTimeframe);
+    // NOTE: 按区域分别搜索，使用各区域对应的 Google 国家代码（gl），提升搜索相关度
+    let allNews: SearchResult[] = [];
+
+    for (const group of config.regionSearchGroups) {
+        // 品牌零售商搜索（已含 URL 去重和日期过滤）
+        const brandNews = await searchRetailers(group.retailers, config.queryTimeframe, group.gl);
+        console.log(`[Generator] Region ${group.region} (gl=${group.gl}): found ${brandNews.length} brand news`);
+        allNews = [...allNews, ...brandNews];
+
+        // 补充该区域的行业通用搜索，覆盖品牌搜索遗漏的行业资讯
+        for (const q of group.industryQueries) {
+            const industryNews = await searchNews(q, group.gl, config.queryTimeframe);
+            console.log(`[Generator] Industry query "${q}": found ${industryNews.length} items`);
+            allNews = [...allNews, ...industryNews];
+        }
+    }
+
+    // 全局 URL 去重（跨区域可能返回相同文章）
+    allNews = Array.from(new Map(allNews.map(item => [item.link, item])).values());
+
     const searchElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[Generator] Search complete in ${searchElapsed}s. Found ${allNews.length} news items.`);
+    console.log(`[Generator] Search complete in ${searchElapsed}s. Found ${allNews.length} unique news items.`);
 
     if (allNews.length === 0) {
         return {

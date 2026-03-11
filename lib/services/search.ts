@@ -93,8 +93,8 @@ export async function searchNews(query: string, location: string = 'us', timefra
 }
 
 // 批量搜索零售商，带代码级日期过滤
-export async function searchRetailers(retailers: string[], timeframe: string = 'qdr:w'): Promise<SearchResult[]> {
-  const CHUNK_SIZE = 8;
+export async function searchRetailers(retailers: string[], timeframe: string = 'qdr:w', gl: string = 'us'): Promise<SearchResult[]> {
+  const CHUNK_SIZE = 5;
   const chunks = [];
   for (let i = 0; i < retailers.length; i += CHUNK_SIZE) {
     chunks.push(retailers.slice(i, i + CHUNK_SIZE));
@@ -104,7 +104,7 @@ export async function searchRetailers(retailers: string[], timeframe: string = '
 
   for (const chunk of chunks) {
     const query = `${chunk.join(' OR ')} retail news`;
-    const results = await searchNews(query, 'us', timeframe);
+    const results = await searchNews(query, gl, timeframe);
     allResults = [...allResults, ...results];
 
     await new Promise(resolve => setTimeout(resolve, 200));
