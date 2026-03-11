@@ -18,8 +18,8 @@ export async function POST(
             return NextResponse.json({ error: 'No items in briefing to send' }, { status: 400 });
         }
 
-        // Send to verified test email
-        await sendBriefingEmail(briefing, 'haojie10@gmail.com');
+        // Send to configured recipients
+        await sendBriefingEmail(briefing);
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

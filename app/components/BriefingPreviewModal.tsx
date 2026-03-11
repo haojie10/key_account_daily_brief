@@ -20,7 +20,7 @@ export function BriefingPreviewModal({ briefing, onClose }: BriefingPreviewModal
             const res = await fetch('/api/email/force-send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ briefing, to: 'haojie10@gmail.com' }),
+                body: JSON.stringify({ briefing }),
             });
 
             if (!res.ok) {

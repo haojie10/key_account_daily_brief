@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         // Maybe query param ?email=false
         const { searchParams } = new URL(req.url);
         if (searchParams.get('email') !== 'false' && briefing.items.length > 0) {
-            await sendBriefingEmail(briefing, 'haojie10@gmail.com');
+            await sendBriefingEmail(briefing);
         }
 
         return NextResponse.json({ success: true, data: briefing });

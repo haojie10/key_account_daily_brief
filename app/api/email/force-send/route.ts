@@ -11,11 +11,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid briefing data' }, { status: 400 });
         }
 
-        // Send to verified test email (or provided 'to' if valid in production)
-        // For safety/testing, we still force haojie10@gmail.com or check env
-        const recipient = to || 'haojie10@gmail.com';
-
-        await sendBriefingEmail(briefing, recipient);
+        // Send to provided 'to' address, or default recipients if none provided
+        await sendBriefingEmail(briefing, to);
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
