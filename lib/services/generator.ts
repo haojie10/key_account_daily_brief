@@ -74,13 +74,13 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
 
     for (const group of config.regionSearchGroups) {
         // 品牌零售商搜索（已含 URL 去重和日期过滤）
-        const brandNews = await searchRetailers(group.retailers, config.queryTimeframe, group.gl);
+        const brandNews = await searchRetailers(group.retailers, group.gl);
         console.log(`[Generator] Region ${group.region} (gl=${group.gl}): found ${brandNews.length} brand news`);
         allNews = [...allNews, ...brandNews];
 
         // 补充该区域的行业通用搜索，覆盖品牌搜索遗漏的行业资讯
         for (const q of group.industryQueries) {
-            const industryNews = await searchNews(q, group.gl, config.queryTimeframe);
+            const industryNews = await searchNews(q, group.gl);
             console.log(`[Generator] Industry query "${q}": found ${industryNews.length} items`);
             allNews = [...allNews, ...industryNews];
         }
