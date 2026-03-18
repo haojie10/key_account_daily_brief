@@ -15,7 +15,7 @@ export interface SearchResult {
  * 解析 SerpAPI 返回的日期字符串，判断是否在指定天数内
  * 支持格式："X hours ago", "X days ago", "X weeks ago", "yesterday", 绝对日期等
  */
-function isWithinDays(dateStr: string | undefined, days: number): boolean {
+export function isWithinDays(dateStr: string | undefined, days: number): boolean {
   // NOTE: 没有日期信息的新闻无法确认时效性，默认排除以避免旧新闻混入
   if (!dateStr) return false;
 

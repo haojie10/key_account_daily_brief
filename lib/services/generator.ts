@@ -1,4 +1,4 @@
-import { searchRetailers, searchNews, scrapeContent, SearchResult } from './search';
+import { searchRetailers, searchNews, scrapeContent, SearchResult, isWithinDays } from './search';
 import { selectTopStories, generateBriefingItem, BriefingItem } from './deepseek';
 import { getSearchConfigForDate } from '../config/retailers';
 import { getBeijingNow, getBeijingDateStr, getBeijingISOString } from '../utils/date-utils';
@@ -89,10 +89,14 @@ export async function generateDailyBriefing(): Promise<DailyBriefing> {
     }
 
     // 全局 URL 去重（跨区域可能返回相同文章）
-    allNews = Array.from(new Map(allNews.map(item => [item.link, item])).values());
+    const uniqueNews = Array.from(new Map(allNews.map(item => [item.link, item])).values());
+
+    // NOTE: 全局再进行一次 7 天时效强制过滤，确保拦截所有来源的过期新闻
+    allNews = uniqueNews.filter(item => isWithinDays(item.date, 7));
+    const filteredCount = uniqueNews.length - allNews.length;
 
     const searchElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[Generator] Search complete in ${searchElapsed}s. Found ${allNews.length} unique news items.`);
+    console.log(`[Generator] Search complete in ${searchElapsed}s. Found ${allNews.length} unique news items (filtered out ${filteredCount} older items).`);
 
     if (allNews.length === 0) {
         return {
