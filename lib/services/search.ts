@@ -16,7 +16,8 @@ export interface SearchResult {
  * 支持格式："X hours ago", "X days ago", "X weeks ago", "yesterday", 绝对日期等
  */
 function isWithinDays(dateStr: string | undefined, days: number): boolean {
-  if (!dateStr) return true; // 没有日期信息则默认保留
+  // NOTE: 没有日期信息的新闻无法确认时效性，默认排除以避免旧新闻混入
+  if (!dateStr) return false;
 
   const lowerDate = dateStr.toLowerCase().trim();
 
@@ -43,8 +44,8 @@ function isWithinDays(dateStr: string | undefined, days: number): boolean {
     return parsed >= cutoff;
   }
 
-  // 无法解析时默认保留
-  return true;
+  // NOTE: 无法解析日期格式时默认排除，避免旧新闻混入
+  return false;
 }
 
 export async function searchNews(query: string, location: string = 'us'): Promise<SearchResult[]> {

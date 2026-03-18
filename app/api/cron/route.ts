@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateDailyBriefing } from '@/lib/services/generator';
 import { sendBriefingEmail } from '@/lib/services/email';
 import { saveBriefing } from '@/lib/storage';
+import { getBeijingISOString } from '@/lib/utils/date-utils';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        console.log(`[Cron] Job started at ${new Date().toISOString()}`);
+        console.log(`[Cron] Job started at ${getBeijingISOString()} (Beijing Time)`);
 
         const briefing = await generateDailyBriefing();
         const genElapsed = ((Date.now() - startTime) / 1000).toFixed(1);

@@ -34,15 +34,15 @@ export const RETAILERS_BY_REGION = {
     au_za: ['Shoprite Holdings', 'Pick n Pay', 'Massmart', 'Makro', 'Woolworths AU', 'Coles', 'Kmart Australia', 'Officeworks', 'The Reject Shop']
 };
 
-// 周日到周四发送，周五与周六不发送
-// NOTE: 轮换顺序保持不变，只是发送日从周一~周五改为周日~周四
+// NOTE: key 为北京时间的星期几（0=周日, 1=周一, ..., 6=周六）
+// 周一~周五发送，周六与周日不发送
 export const ROTATION_SCHEDULE = {
-    0: ['germany', 'france'],               // 周日：德国、法国
-    1: ['netherlands', 'italy', 'uk'],       // 周一：荷兰、意大利、英国
-    2: ['nordics', 'spain'],                 // 周二：北欧、西班牙
-    3: ['poland', 'us'],                     // 周三：波兰、美国
-    4: ['canada_mexico', 'au_za'],           // 周四：加拿大/墨西哥、澳新/南非
-    5: [],                                   // 周五：不发送
+    1: ['germany', 'france'],               // 周一：德国、法国
+    2: ['netherlands', 'italy', 'uk'],       // 周二：荷兰、意大利、英国
+    3: ['nordics', 'spain'],                 // 周三：北欧、西班牙
+    4: ['poland', 'us'],                     // 周四：波兰、美国
+    5: ['canada_mexico', 'au_za'],           // 周五：加拿大/墨西哥、澳新/南非
+    0: [],                                   // 周日：不发送
     6: [],                                   // 周六：不发送
 };
 
@@ -93,10 +93,11 @@ export const INDUSTRY_QUERIES_BY_REGION: Record<string, string[]> = {
 
 // 获取某天的搜索配置
 export function getSearchConfigForDate(date: Date) {
+    // NOTE: date 参数已经是北京时间，直接取 getDay() 即为北京时间星期
     const dayOfWeek = date.getDay();
 
-    // 周五(5)和周六(6)不生成
-    if (dayOfWeek === 5 || dayOfWeek === 6) {
+    // 周六(6)和周日(0)不生成
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
         return null;
     }
 

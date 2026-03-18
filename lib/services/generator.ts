@@ -1,6 +1,7 @@
 import { searchRetailers, searchNews, scrapeContent, SearchResult } from './search';
 import { selectTopStories, generateBriefingItem, BriefingItem } from './deepseek';
 import { getSearchConfigForDate } from '../config/retailers';
+import { getBeijingNow, getBeijingDateStr, getBeijingISOString } from '../utils/date-utils';
 
 /**
  * 基于标题关键词相似度去重
@@ -55,10 +56,11 @@ export interface DailyBriefing {
 
 export async function generateDailyBriefing(): Promise<DailyBriefing> {
     const startTime = Date.now();
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
+    // NOTE: 统一使用北京时间，确保 Vercel（UTC 服务器）上日期和星期判断正确
+    const today = getBeijingNow();
+    const dateStr = getBeijingDateStr();
 
-    console.log(`[Generator] Starting briefing generation for ${dateStr}...`);
+    console.log(`[Generator] Starting briefing generation for ${dateStr} (Beijing Time: ${getBeijingISOString()})...`);
 
     const config = getSearchConfigForDate(today);
 
