@@ -55,9 +55,13 @@ export async function searchNews(query: string, location: string = 'us'): Promis
   }
 
   try {
-    // NOTE: google_news 引擎不支持 tbs 参数，时间过滤在代码层面完成
+    // NOTE: 改用 google 引擎的 news 标签页（tbm=nws），因为它支持通过 tbs=qdr:w 原生过滤最近一周新闻
+    // 并且加上 hl=en 强制返回英文日期（过滤掉 "6 dag siden" 这种多语言字符串导致无法使用 new Date 解析的问题）
     const params = new URLSearchParams({
-      engine: 'google_news',
+      engine: 'google',
+      tbm: 'nws',
+      tbs: 'qdr:w',
+      hl: 'en',
       q: query,
       gl: location,
       api_key: SERPAPI_API_KEY
