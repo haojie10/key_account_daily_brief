@@ -15,8 +15,22 @@ const transporter = nodemailer.createTransport({
 
 // 收件人列表，后续可扩展到 10 个
 const RECIPIENTS = [
-    '838048181@qq.com',
     'sales@howstoday.com',
+    'market7@howstoday.com',
+    'market17@howstoday.com',
+    'market15@howstoday.com',
+    'sales30@howstoday.com',
+    'sales31@howstoday.com',
+    'sales32@howstoday.com',
+    'sales33@howstoday.com',
+    'sales60@howstoday.com',
+    'sales61@howstoday.com',
+    'sales80@howstoday.com',
+    'sales81@howstoday.com',
+    'sales90@howstoday.com',
+    'sales91@howstoday.com',
+    'sales100@howstoday.com',
+    'sales101@howstoday.com',
 ];
 
 export async function sendBriefingEmail(briefing: DailyBriefing, to?: string) {

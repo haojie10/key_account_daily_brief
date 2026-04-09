@@ -8,6 +8,7 @@ async function test() {
 
     // Mock briefing
     const mockBriefing: DailyBriefing = {
+        id: new Date().toISOString(),
         date: new Date().toLocaleDateString(),
         items: [
             {
@@ -21,11 +22,15 @@ async function test() {
                 tags: ["Test", "Nodemailer"],
                 region: "GLOBAL"
             }
-        ]
+        ],
+        stats: {
+            totalScanned: 1,
+            generated: 1
+        }
     };
 
     try {
-        await sendBriefingEmail(mockBriefing, '838048181@qq.com');
+        await sendBriefingEmail(mockBriefing, 'sales@howstoday.com');
         console.log('Test completed: check your inbox!');
     } catch (e) {
         console.error('Test failed:', e);
